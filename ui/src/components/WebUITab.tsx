@@ -111,6 +111,25 @@ export function WebUITab({ uiHostPort, ddClient, zoom, onZoomChange }: WebUITabP
             ...(isDark && { filter: 'invert(1) hue-rotate(180deg)' }),
           }}
         />
+        {/* Cross-origin workaround: overlay opaque divs to hide MailHog's navbar-brand and GitHub link.
+            CSS injection into the iframe is blocked because it's a different origin (localhost:port). */}
+        {[
+          { left: 0, width: `${170 * zoom}px` },   // covers .navbar-brand (logo + "MailHog" text)
+          { right: 0, width: `${130 * zoom}px` },   // covers .navbar-right (GitHub link)
+        ].map((pos, i) => (
+          <Box
+            key={i}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              height: `${50 * zoom}px`,
+              bgcolor: isDark ? '#070707': '#F8F8F8' ,
+              zIndex: 1,
+              pointerEvents: 'none',
+              ...pos,
+            }}
+          />
+        ))}
       </Box>
     </Box>
   );
