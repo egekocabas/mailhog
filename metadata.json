@@ -1,7 +1,7 @@
 {
   "icon": "extension-icon.svg",
   "vm": {
-    "composefile": "docker-compose.yaml",
+    "composefile": "compose.yaml",
     "exposes": {
       "socket": "backend.sock"
     }

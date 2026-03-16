@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 ENV CGO_ENABLED=0
 WORKDIR /backend
 COPY backend/go.* .
@@ -39,8 +39,8 @@ LABEL com.docker.extension.changelog="<ul><li>Initial release</li></ul>"
 LABEL com.docker.extension.account-info=""
 
 COPY --from=builder /backend/bin/service /
-COPY docker-compose.yaml .
+COPY compose.yaml .
 COPY metadata.json .
-COPY docker.svg .
+COPY assets/extension-icon.svg .
 COPY --from=client-builder /ui/build ui
 CMD /service -socket /run/guest-services/backend.sock

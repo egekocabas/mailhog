@@ -25,10 +25,13 @@ run-client: ## Run the client
 	npm --prefix ui install && npm --prefix ui run dev
 
 set-extension-source: ## Set Docker extension dev source
-	docker extension dev ui-source egekocabas/mailhog:latest http://localhost:3000
+	docker extension dev ui-source egekocabas/mailhog:$(TAG) http://localhost:3000
 
 debug-ui: ## Debug the UI
-	docker extension dev debug egekocabas/mailhog:latest
+	docker extension dev debug egekocabas/mailhog:$(TAG)
+
+debug-reset: ## Debug the UI
+	docker extension dev reset egekocabas/mailhog:$(TAG)
 
 validate-extension: ## Validate the extension
 	docker extension validate $(IMAGE):$(TAG)

@@ -2,7 +2,7 @@ services:
   mailhog:
     image: ${DESKTOP_PLUGIN_IMAGE}
     volumes:
-      # Plugin data
+      - /var/run/docker.sock:/var/run/docker.sock
       - "mailhog:/root/mailhog/"
 
 volumes:

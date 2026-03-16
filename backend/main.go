@@ -1,10 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"net"
-	"net/http"
 	"os"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -22,21 +23,40 @@ func main() {
 
 	logger.SetOutput(os.Stdout)
 
-	logMiddleware := middleware.LoggerWithConfig(middleware.LoggerConfig{
-		Skipper: middleware.DefaultSkipper,
-		Format: `{"time":"${time_rfc3339_nano}","id":"${id}",` +
-			`"method":"${method}","uri":"${uri}",` +
-			`"status":${status},"error":"${error}"` +
-			`}` + "\n",
-		CustomTimeFormat: "2006-01-02 15:04:05.00000",
-		Output:           logger.Writer(),
+	logMiddleware := middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogMethod:    true,
+		LogURI:       true,
+		LogStatus:    true,
+		LogRequestID: true,
+		LogLatency:   true,
+		LogError:     true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			entry := map[string]any{
+				"time":   v.StartTime.UTC().Format(time.RFC3339Nano),
+				"id":     v.RequestID,
+				"method": v.Method,
+				"uri":    v.URI,
+				"status": v.Status,
+			}
+			if v.Error != nil {
+				entry["error"] = v.Error.Error()
+			}
+			b, _ := json.Marshal(entry)
+			logger.Writer().Write(append(b, '\n'))
+			return nil
+		},
 	})
+
+	manager, err := NewManager()
+	if err != nil {
+		logger.Fatalf("create docker manager: %v", err)
+	}
+	h := NewHandler(manager)
 
 	logger.Infof("Starting listening on %s\n", socketPath)
 	router := echo.New()
 	router.HideBanner = true
 	router.Use(logMiddleware)
-	startURL := ""
 
 	ln, err := listen(socketPath)
 	if err != nil {
@@ -44,19 +64,16 @@ func main() {
 	}
 	router.Listener = ln
 
-	router.GET("/hello", hello)
+	router.GET("/mailhog/status", h.Status)
+	router.POST("/mailhog/start", h.Start)
+	router.POST("/mailhog/stop", h.Stop)
+	router.POST("/mailhog/restart", h.Restart)
+	router.POST("/mailhog/test", h.TestEmail)
+	router.GET("/mailhog/messages", h.Messages)
 
-	logger.Fatal(router.Start(startURL))
+	logger.Fatal(router.Start(""))
 }
 
 func listen(path string) (net.Listener, error) {
 	return net.Listen("unix", path)
-}
-
-func hello(ctx echo.Context) error {
-	return ctx.JSON(http.StatusOK, HTTPMessageBody{Message: "hello"})
-}
-
-type HTTPMessageBody struct {
-	Message string
 }
