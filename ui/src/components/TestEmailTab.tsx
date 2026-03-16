@@ -20,14 +20,26 @@ export function TestEmailTab({ ddClient }: TestEmailTabProps) {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<'delivered' | 'unverified' | null>(null);
 
-  const canSend = from.trim() && to.trim() && subject.trim() && body.trim() && !sending;
+  const defaults = {
+    from: 'sender@example.com',
+    to: 'recipient@example.com',
+    subject: 'Test Email',
+    body: 'This is a test email sent from the MailHog Docker Desktop extension.',
+  };
+
+  const canSend = !sending;
 
   const handleSend = async () => {
     setSending(true);
     setResult(null);
     try {
       const svc = ddClient.extension.vm!.service!;
-      const resp = await sendTestEmail(svc, { from, to, subject, body });
+      const resp = await sendTestEmail(svc, {
+        from: from.trim() || defaults.from,
+        to: to.trim() || defaults.to,
+        subject: subject.trim() || defaults.subject,
+        body: body.trim() || defaults.body,
+      });
       setResult(resp.delivered ? 'delivered' : 'unverified');
     } catch (err) {
       ddClient.desktopUI.toast.error(extractMessage(err));
@@ -41,7 +53,9 @@ export function TestEmailTab({ ddClient }: TestEmailTabProps) {
       <Stack spacing={2} sx={{ maxWidth: 520 }}>
         <TextField
           label="From"
+          InputLabelProps={{ shrink: true }}
           type="email"
+          placeholder={defaults.from}
           value={from}
           onChange={(e) => setFrom(e.target.value)}
           disabled={sending}
@@ -49,7 +63,9 @@ export function TestEmailTab({ ddClient }: TestEmailTabProps) {
         />
         <TextField
           label="To"
+          InputLabelProps={{ shrink: true }}
           type="email"
+          placeholder={defaults.to}
           value={to}
           onChange={(e) => setTo(e.target.value)}
           disabled={sending}
@@ -57,6 +73,8 @@ export function TestEmailTab({ ddClient }: TestEmailTabProps) {
         />
         <TextField
           label="Subject"
+          InputLabelProps={{ shrink: true }}
+          placeholder={defaults.subject}
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
           disabled={sending}
@@ -64,6 +82,8 @@ export function TestEmailTab({ ddClient }: TestEmailTabProps) {
         />
         <TextField
           label="Body"
+          InputLabelProps={{ shrink: true }}
+          placeholder={defaults.body}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           disabled={sending}
