@@ -3,7 +3,7 @@ import Backdrop from '@mui/material/Backdrop';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import { createDockerDesktopClient } from '@docker/extension-api-client';
-import { fetchStatus, fetchSettings, saveSettings, startMailHog, stopMailHog, restartMailHog, extractMessage, ConflictError, type MailHogStatus } from './api';
+import { fetchStatus, fetchSettings, saveSettings, startMailHog, stopMailHog, restartMailHog, removeMailHog, extractMessage, ConflictError, type MailHogStatus } from './api';
 import { SetupScreen } from './components/SetupScreen';
 import { RunningHeader } from './components/RunningHeader';
 import { MainTabs } from './components/MainTabs';
@@ -25,12 +25,31 @@ export function App() {
   useEffect(() => {
     console.log('[App] initial fetch');
     Promise.all([fetchStatus(svc), fetchSettings(svc)])
-      .then(([s, cfg]) => {
+      .then(async ([s, cfg]) => {
         console.log('[App] initial status:', s, 'settings:', cfg);
-        setStatus(s);
-        setSmtpPort(s.smtpHostPort ? Number(s.smtpHostPort) : cfg.smtpPort);
-        setUiPort(s.uiHostPort ? Number(s.uiHostPort) : cfg.uiPort);
+        const resolvedSmtp = s.smtpHostPort ? Number(s.smtpHostPort) : cfg.smtpPort;
+        const resolvedUi   = s.uiHostPort   ? Number(s.uiHostPort)   : cfg.uiPort;
+        setSmtpPort(resolvedSmtp);
+        setUiPort(resolvedUi);
         setZoom(cfg.zoom);
+
+        if (!s.running && s.containerID) {
+          // Stopped labeled container exists — auto-restart it silently
+          try {
+            await startMailHog(svc, { smtpHostPort: resolvedSmtp, uiHostPort: resolvedUi });
+            const resumed = await fetchStatus(svc);
+            console.log('[App] auto-resumed status:', resumed);
+            if (resumed.smtpHostPort) setSmtpPort(Number(resumed.smtpHostPort));
+            if (resumed.uiHostPort) setUiPort(Number(resumed.uiHostPort));
+            setStatus(resumed);
+          } catch (err) {
+            console.error('[App] auto-resume failed, removing container:', err);
+            removeMailHog(svc).catch(() => {/* ignore removal failure */});
+            setStatus({ running: false }); // fall back to SetupScreen
+          }
+        } else {
+          setStatus(s);
+        }
       })
       .catch((err) => {
         console.error('[App] initial fetch error:', err);
@@ -158,8 +177,8 @@ export function App() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <RunningHeader
-        smtpPort={smtpPort}
-        uiPort={uiPort}
+        smtpPort={status.smtpHostPort ? Number(status.smtpHostPort) : 0}
+        uiPort={status.uiHostPort ? Number(status.uiHostPort) : 0}
         activeAction={activeAction === 'stop' || activeAction === 'restart' ? activeAction : null}
         onRestart={handleRestart}
         onStop={handleStop}

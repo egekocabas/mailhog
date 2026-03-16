@@ -141,6 +141,14 @@ func (h *Handler) SaveSettings(c echo.Context) error {
 	return c.JSON(http.StatusOK, s)
 }
 
+func (h *Handler) Remove(c echo.Context) error {
+	_ = h.manager.StopMailHog(c.Request().Context())
+	if err := h.manager.RemoveMailHog(c.Request().Context()); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, map[string]string{"status": "removed"})
+}
+
 func (h *Handler) Messages(c echo.Context) error {
 	apiURL := h.manager.GetMailHogAPIURL()
 	resp, err := http.Get(apiURL + "/api/v2/messages")

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
+	"sync"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -16,10 +18,10 @@ import (
 
 const (
 	mailHogImage     = "mailhog/mailhog"
-	containerName    = "mailhog-extension"
 	networkName      = "mailhog-extension-network"
 	smtpInternalPort = 1025
 	uiInternalPort   = 8025
+	extensionLabel   = "com.egekocabas.mailhog-extension"
 )
 
 type Config struct {
@@ -35,7 +37,9 @@ type Status struct {
 }
 
 type Manager struct {
-	cli *client.Client
+	cli           *client.Client
+	mu            sync.Mutex
+	containerName string
 }
 
 func NewManager() (*Manager, error) {
@@ -99,7 +103,40 @@ func (m *Manager) pullImage(ctx context.Context) error {
 	return err
 }
 
+func (m *Manager) checkPortConflicts(ctx context.Context, cfg Config) error {
+	if cfg.SMTPHostPort == 0 && cfg.UIHostPort == 0 {
+		return nil
+	}
+	running, err := m.cli.ContainerList(ctx, container.ListOptions{All: false})
+	if err != nil {
+		return fmt.Errorf("list containers: %w", err)
+	}
+	for _, c := range running {
+		name := ""
+		if len(c.Names) > 0 {
+			name = strings.TrimPrefix(c.Names[0], "/")
+		}
+		for _, p := range c.Ports {
+			if p.PublicPort == 0 {
+				continue
+			}
+			hostPort := int(p.PublicPort)
+			if cfg.SMTPHostPort > 0 && hostPort == cfg.SMTPHostPort {
+				return fmt.Errorf("port %d is already in use by container %q", cfg.SMTPHostPort, name)
+			}
+			if cfg.UIHostPort > 0 && hostPort == cfg.UIHostPort {
+				return fmt.Errorf("port %d is already in use by container %q", cfg.UIHostPort, name)
+			}
+		}
+	}
+	return nil
+}
+
 func (m *Manager) StartMailHog(ctx context.Context, cfg Config) error {
+	if err := m.checkPortConflicts(ctx, cfg); err != nil {
+		return err
+	}
+
 	networkID, err := m.ensureNetwork(ctx)
 	if err != nil {
 		return err
@@ -107,6 +144,19 @@ func (m *Manager) StartMailHog(ctx context.Context, cfg Config) error {
 
 	if err := m.connectBackendToNetwork(ctx, networkID); err != nil {
 		logger.Warnf("connect backend to network: %v", err)
+	}
+
+	// Reuse existing stopped container if one exists with our label
+	existingName, _ := m.resolveContainerName(ctx)
+	if existingName != "" {
+		if err := m.cli.ContainerStart(ctx, existingName, container.StartOptions{}); err != nil {
+			_ = m.cli.ContainerRemove(ctx, existingName, container.RemoveOptions{Force: true})
+			m.mu.Lock()
+			m.containerName = ""
+			m.mu.Unlock()
+			return fmt.Errorf("start existing container: %w", err)
+		}
+		return nil
 	}
 
 	if err := m.pullImage(ctx); err != nil {
@@ -136,6 +186,7 @@ func (m *Manager) StartMailHog(ctx context.Context, cfg Config) error {
 		&container.Config{
 			Image:        mailHogImage,
 			ExposedPorts: exposedPorts,
+			Labels:       map[string]string{extensionLabel: "true"},
 		},
 		&container.HostConfig{
 			PortBindings: portBindings,
@@ -146,21 +197,67 @@ func (m *Manager) StartMailHog(ctx context.Context, cfg Config) error {
 			},
 		},
 		nil,
-		containerName,
+		"",
 	)
 	if err != nil {
 		return fmt.Errorf("create container: %w", err)
 	}
 
 	if err := m.cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		_ = m.cli.ContainerRemove(ctx, resp.ID, container.RemoveOptions{Force: true})
 		return fmt.Errorf("start container: %w", err)
 	}
+
+	info, err := m.cli.ContainerInspect(ctx, resp.ID)
+	if err == nil {
+		m.mu.Lock()
+		m.containerName = strings.TrimPrefix(info.Name, "/")
+		m.mu.Unlock()
+	}
+
 	return nil
 }
 
+func (m *Manager) findContainerByLabel(ctx context.Context) (string, error) {
+	containers, err := m.cli.ContainerList(ctx, container.ListOptions{
+		All:     true,
+		Filters: filters.NewArgs(filters.Arg("label", extensionLabel)),
+	})
+	if err != nil || len(containers) == 0 {
+		return "", err
+	}
+	return strings.TrimPrefix(containers[0].Names[0], "/"), nil
+}
+
+func (m *Manager) resolveContainerName(ctx context.Context) (string, error) {
+	m.mu.Lock()
+	name := m.containerName
+	m.mu.Unlock()
+	if name != "" {
+		return name, nil
+	}
+	name, err := m.findContainerByLabel(ctx)
+	if err != nil {
+		return "", err
+	}
+	if name != "" {
+		m.mu.Lock()
+		m.containerName = name
+		m.mu.Unlock()
+	}
+	return name, nil
+}
+
 func (m *Manager) StopMailHog(ctx context.Context) error {
+	name, err := m.resolveContainerName(ctx)
+	if err != nil {
+		return err
+	}
+	if name == "" {
+		return nil
+	}
 	timeout := 10
-	if err := m.cli.ContainerStop(ctx, containerName, container.StopOptions{Timeout: &timeout}); err != nil {
+	if err := m.cli.ContainerStop(ctx, name, container.StopOptions{Timeout: &timeout}); err != nil {
 		if client.IsErrNotFound(err) {
 			return nil
 		}
@@ -170,19 +267,40 @@ func (m *Manager) StopMailHog(ctx context.Context) error {
 }
 
 func (m *Manager) RemoveMailHog(ctx context.Context) error {
-	if err := m.cli.ContainerRemove(ctx, containerName, container.RemoveOptions{Force: true}); err != nil {
+	name, err := m.resolveContainerName(ctx)
+	if err != nil {
+		return err
+	}
+	if name == "" {
+		return nil
+	}
+	if err := m.cli.ContainerRemove(ctx, name, container.RemoveOptions{Force: true}); err != nil {
 		if client.IsErrNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("remove container: %w", err)
 	}
+	m.mu.Lock()
+	m.containerName = ""
+	m.mu.Unlock()
 	return nil
 }
 
 func (m *Manager) GetStatus(ctx context.Context) (Status, error) {
-	info, err := m.cli.ContainerInspect(ctx, containerName)
+	name, err := m.resolveContainerName(ctx)
+	if err != nil {
+		return Status{}, err
+	}
+	if name == "" {
+		return Status{Running: false}, nil
+	}
+
+	info, err := m.cli.ContainerInspect(ctx, name)
 	if err != nil {
 		if client.IsErrNotFound(err) {
+			m.mu.Lock()
+			m.containerName = ""
+			m.mu.Unlock()
 			return Status{Running: false}, nil
 		}
 		return Status{}, fmt.Errorf("inspect container: %w", err)
@@ -196,10 +314,10 @@ func (m *Manager) GetStatus(ctx context.Context) (Status, error) {
 	smtpPort := nat.Port(fmt.Sprintf("%d/tcp", smtpInternalPort))
 	uiPort := nat.Port(fmt.Sprintf("%d/tcp", uiInternalPort))
 
-	if bindings, ok := info.HostConfig.PortBindings[smtpPort]; ok && len(bindings) > 0 {
+	if bindings, ok := info.NetworkSettings.Ports[smtpPort]; ok && len(bindings) > 0 {
 		status.SMTPHostPort = bindings[0].HostPort
 	}
-	if bindings, ok := info.HostConfig.PortBindings[uiPort]; ok && len(bindings) > 0 {
+	if bindings, ok := info.NetworkSettings.Ports[uiPort]; ok && len(bindings) > 0 {
 		status.UIHostPort = bindings[0].HostPort
 	}
 
@@ -207,9 +325,15 @@ func (m *Manager) GetStatus(ctx context.Context) (Status, error) {
 }
 
 func (m *Manager) GetMailHogSMTPAddr() string {
-	return fmt.Sprintf("%s:%d", containerName, smtpInternalPort)
+	m.mu.Lock()
+	name := m.containerName
+	m.mu.Unlock()
+	return name + fmt.Sprintf(":%d", smtpInternalPort)
 }
 
 func (m *Manager) GetMailHogAPIURL() string {
-	return fmt.Sprintf("http://%s:%d", containerName, uiInternalPort)
+	m.mu.Lock()
+	name := m.containerName
+	m.mu.Unlock()
+	return fmt.Sprintf("http://%s:%d", name, uiInternalPort)
 }

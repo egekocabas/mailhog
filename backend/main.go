@@ -68,6 +68,7 @@ func main() {
 	router.POST("/mailhog/start", h.Start)
 	router.POST("/mailhog/stop", h.Stop)
 	router.POST("/mailhog/restart", h.Restart)
+	router.POST("/mailhog/remove", h.Remove)
 	router.POST("/mailhog/test", h.TestEmail)
 	router.GET("/mailhog/messages", h.Messages)
 	router.GET("/mailhog/settings", h.GetSettings)

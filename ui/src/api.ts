@@ -72,6 +72,11 @@ export async function stopMailHog(svc: Service): Promise<void> {
   await handleResponse<{ status: string }>(svc.post('/mailhog/stop', {}));
 }
 
+export async function removeMailHog(svc: Service): Promise<void> {
+  console.log('[api] POST /mailhog/remove');
+  await handleResponse<{ status: string }>(svc.post('/mailhog/remove', {}));
+}
+
 export async function restartMailHog(svc: Service, cfg: StartConfig): Promise<void> {
   console.log('[api] POST /mailhog/restart', cfg);
   await handleResponse<{ status: string }>(
