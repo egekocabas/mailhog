@@ -1,3 +1,90 @@
-<svg viewBox="0 0 24 24" fill="#2396ED" xmlns="http://www.w3.org/2000/svg">
-  <path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7s2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"></path>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+
+    <!-- Body -->
+    <linearGradient id="pigBody" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8B2430"/>
+      <stop offset="100%" stop-color="#7A1F2B"/>
+    </linearGradient>
+
+    <!-- Tail -->
+    <linearGradient id="pigTail" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#B53C4B"/>
+      <stop offset="100%" stop-color="#9E2E3C"/>
+    </linearGradient>
+
+    <!-- Head -->
+    <linearGradient id="pigHead" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D65A66"/>
+      <stop offset="100%" stop-color="#C74755"/>
+    </linearGradient>
+
+  </defs>
+
+
+  <!-- Container stack -->
+  <g fill="url(#pigBody)">
+    <rect x="200" y="210" width="50" height="35" rx="6"/>
+    <rect x="255" y="210" width="50" height="35" rx="6"/>
+    <rect x="310" y="210" width="50" height="35" rx="6"/>
+    <rect x="365" y="210" width="50" height="35" rx="6"/>
+
+    <rect x="225" y="250" width="50" height="35" rx="6"/>
+    <rect x="280" y="250" width="50" height="35" rx="6"/>
+    <rect x="335" y="250" width="50" height="35" rx="6"/>
+    <rect x="390" y="250" width="50" height="35" rx="6"/>
+
+    <rect x="250" y="290" width="50" height="35" rx="6"/>
+    <rect x="305" y="290" width="50" height="35" rx="6"/>
+    <rect x="360" y="290" width="50" height="35" rx="6"/>
+    <rect x="415" y="290" width="50" height="35" rx="6"/>
+  </g>
+
+
+  <!-- Body -->
+  <path d="
+    M150 330
+    H380
+    C420 330 450 350 465 380
+    C480 405 505 410 512 410
+    C490 445 440 460 380 460
+    H210
+    C160 460 120 430 110 395
+    C105 370 120 330 150 330
+  "
+        fill="url(#pigBody)"/>
+
+
+  <!-- Tail -->
+  <path d="
+    M380 340
+    C400 315 440 305 470 310
+    C450 335 450 360 485 375
+    C450 390 410 380 390 360
+  "
+        fill="url(#pigTail)"/>
+
+
+  <!-- Pig head -->
+  <g transform="translate(182,294) scale(1.65)">
+
+    <!-- slightly lowered ears -->
+    <polygon points="-25,-10 -40,-80 -5,-40" fill="url(#pigHead)"/>
+    <polygon points="25,-10 40,-80 5,-40" fill="url(#pigHead)"/>
+
+    <!-- face -->
+    <circle cx="0" cy="0" r="50" fill="url(#pigHead)"/>
+
+    <!-- eyes -->
+    <circle cx="-18" cy="-12" r="6" fill="#3a0b10"/>
+    <circle cx="18" cy="-12" r="6" fill="#3a0b10"/>
+
+    <!-- snout -->
+    <ellipse cx="0" cy="14" rx="22" ry="16" fill="#F1A9B1"/>
+    <circle cx="-8" cy="14" r="4.5" fill="#7A1F2B"/>
+    <circle cx="8" cy="14" r="4.5" fill="#7A1F2B"/>
+
+  </g>
+
 </svg>
