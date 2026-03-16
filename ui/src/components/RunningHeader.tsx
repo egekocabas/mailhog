@@ -3,31 +3,38 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
+import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
+import Tooltip from '@mui/material/Tooltip';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
 import { RestartDialog } from './RestartDialog';
 
 interface RunningHeaderProps {
+  containerName: string | undefined;
   smtpPort: number;
   uiPort: number;
   activeAction: 'stop' | 'restart' | null;
   onRestart: (smtpPort: number, uiPort: number) => void;
   onStop: () => void;
+  onOpenUI: () => void;
 }
 
 export function RunningHeader({
+  containerName,
   smtpPort,
   uiPort,
   activeAction,
   onRestart,
   onStop,
+  onOpenUI,
 }: RunningHeaderProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const uiLabel   = uiPort   > 0 ? `:${uiPort}`   : 'no binding';
   const smtpLabel = smtpPort > 0 ? `:${smtpPort}` : 'no binding';
-  const uiLabel = uiPort > 0 ? `:${uiPort}` : 'no binding';
 
   return (
     <>
@@ -45,10 +52,24 @@ export function RunningHeader({
           borderTop: 'none',
         }}
       >
-        <Chip label="Running" color="success" size="small" />
-        <Typography variant="body2" color="text.secondary">
-          SMTP {smtpLabel} &nbsp;·&nbsp; Web UI {uiLabel}
-        </Typography>
+        <Tooltip title={containerName ?? ''} placement="bottom">
+          <Chip label="Running" color="success" size="small" />
+        </Tooltip>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            Web UI {uiLabel}
+          </Typography>
+          {uiPort > 0 && (
+            <Tooltip title="Open in browser">
+              <IconButton size="small" onClick={onOpenUI}>
+                <OpenInNewIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Typography variant="body2" color="text.secondary">
+            &nbsp;·&nbsp; SMTP {smtpLabel}
+          </Typography>
+        </Box>
         <Box sx={{ flexGrow: 1 }} />
         <Button
           variant="outlined"

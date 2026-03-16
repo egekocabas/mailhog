@@ -3,6 +3,7 @@ import type { HttpService } from '@docker/extension-api-client-types/dist/v1';
 export interface MailHogStatus {
   running: boolean;
   containerID?: string;
+  containerName?: string;
   smtpHostPort?: string;
   uiHostPort?: string;
 }

@@ -27,7 +27,7 @@ export function MainTabs({ uiHostPort, ddClient, zoom, onZoomChange }: MainTabsP
         hidden={activeTab !== 0}
         sx={{ flexGrow: 1, display: activeTab === 0 ? 'flex' : 'none', flexDirection: 'column', overflow: 'hidden', pt: 1 }}
       >
-        <WebUITab uiHostPort={uiHostPort} ddClient={ddClient} zoom={zoom} onZoomChange={onZoomChange} />
+        <WebUITab uiHostPort={uiHostPort} zoom={zoom} onZoomChange={onZoomChange} />
       </Box>
       <Box
         role="tabpanel"

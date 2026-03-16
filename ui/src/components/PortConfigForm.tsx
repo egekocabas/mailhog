@@ -3,6 +3,7 @@ import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
 
 const SMTP_DEFAULT = 1025;
@@ -56,23 +57,9 @@ export function PortConfigForm({
 }: PortConfigFormProps) {
   return (
     <Stack spacing={2}>
-      <TextField
-        label="SMTP Port"
-        type="number"
-        value={smtpPort}
-        onChange={(e) => onSmtpPortChange(Number(e.target.value))}
-        inputProps={{ min: 0, max: 65535 }}
-        helperText={
-          <HelperText
-            label="SMTP Port"
-            defaultValue={SMTP_DEFAULT}
-            onReset={() => onSmtpPortChange(SMTP_DEFAULT)}
-            disabled={disabled}
-          />
-        }
-        disabled={disabled}
-        fullWidth
-      />
+      <Typography variant="body2" color="text.secondary">
+        Set a port to bind it to your host. Leave as 0 to skip host binding.
+      </Typography>
       <TextField
         label="Web UI Port"
         type="number"
@@ -84,6 +71,23 @@ export function PortConfigForm({
             label="Web UI Port"
             defaultValue={UI_DEFAULT}
             onReset={() => onUiPortChange(UI_DEFAULT)}
+            disabled={disabled}
+          />
+        }
+        disabled={disabled}
+        fullWidth
+      />
+      <TextField
+        label="SMTP Port"
+        type="number"
+        value={smtpPort}
+        onChange={(e) => onSmtpPortChange(Number(e.target.value))}
+        inputProps={{ min: 0, max: 65535 }}
+        helperText={
+          <HelperText
+            label="SMTP Port"
+            defaultValue={SMTP_DEFAULT}
+            onReset={() => onSmtpPortChange(SMTP_DEFAULT)}
             disabled={disabled}
           />
         }

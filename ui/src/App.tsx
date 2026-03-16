@@ -178,11 +178,13 @@ export function App() {
     <Box sx={{ display: 'flex', flexDirection: 'column', position: 'fixed', inset: 0 }}>
       <Box sx={{ flexShrink: 0 }}>
         <RunningHeader
+          containerName={status.containerName}
           smtpPort={status.smtpHostPort ? Number(status.smtpHostPort) : 0}
           uiPort={status.uiHostPort ? Number(status.uiHostPort) : 0}
           activeAction={activeAction === 'stop' || activeAction === 'restart' ? activeAction : null}
           onRestart={handleRestart}
           onStop={handleStop}
+          onOpenUI={() => status.uiHostPort && ddClient.host.openExternal(`http://localhost:${status.uiHostPort}`)}
         />
       </Box>
       <MainTabs uiHostPort={status.uiHostPort} ddClient={ddClient} zoom={zoom} onZoomChange={(z) => { setZoom(z); saveSettings(svc, { smtpPort, uiPort, zoom: z }).catch(() => {/* non-fatal */}); }} />

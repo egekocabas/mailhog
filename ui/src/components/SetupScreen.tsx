@@ -36,7 +36,7 @@ export function SetupScreen({
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           MailHog is a lightweight SMTP testing server. Configure the host ports below and click
-          Start to launch it. Leave a port as 0 to skip binding it to the host.
+          Start to launch it.
         </Typography>
         <PortConfigForm
           smtpPort={smtpPort}

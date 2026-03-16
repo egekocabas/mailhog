@@ -1,15 +1,12 @@
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
-import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import type { DockerDesktopClient } from '@docker/extension-api-client-types/dist/v1';
 
 const ZOOM_STEP = 0.1;
 const ZOOM_MIN = 0.5;
@@ -17,12 +14,11 @@ const ZOOM_MAX = 2.0;
 
 interface WebUITabProps {
   uiHostPort: string | undefined;
-  ddClient: DockerDesktopClient;
   zoom: number;
   onZoomChange: (zoom: number) => void;
 }
 
-export function WebUITab({ uiHostPort, ddClient, zoom, onZoomChange }: WebUITabProps) {
+export function WebUITab({ uiHostPort, zoom, onZoomChange }: WebUITabProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const hasBinding = uiHostPort && uiHostPort !== '0';
@@ -62,16 +58,7 @@ export function WebUITab({ uiHostPort, ddClient, zoom, onZoomChange }: WebUITabP
 
   return (
     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5 }}>
-        <Typography variant="caption" color="text.secondary">
-          {url}
-        </Typography>
-        <Tooltip title="Open in browser">
-          <IconButton size="small" onClick={() => ddClient.host.openExternal(url)}>
-            <OpenInNewIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Box sx={{ flexGrow: 1 }} />
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1.5, py: 0.5 }}>
         <ButtonGroup size="small" variant="outlined">
           <Tooltip title="Zoom out">
             <span>
@@ -92,7 +79,6 @@ export function WebUITab({ uiHostPort, ddClient, zoom, onZoomChange }: WebUITabP
           </Tooltip>
         </ButtonGroup>
       </Box>
-      <Divider />
       {/* Outer box clips the scaled iframe to its bounds */}
       <Box sx={{ flexGrow: 1, overflow: 'hidden', position: 'relative' }}>
         <Box

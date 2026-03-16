@@ -30,10 +30,11 @@ type Config struct {
 }
 
 type Status struct {
-	Running      bool   `json:"running"`
-	ContainerID  string `json:"containerID,omitempty"`
-	SMTPHostPort string `json:"smtpHostPort,omitempty"`
-	UIHostPort   string `json:"uiHostPort,omitempty"`
+	Running       bool   `json:"running"`
+	ContainerID   string `json:"containerID,omitempty"`
+	ContainerName string `json:"containerName,omitempty"`
+	SMTPHostPort  string `json:"smtpHostPort,omitempty"`
+	UIHostPort    string `json:"uiHostPort,omitempty"`
 }
 
 type Manager struct {
@@ -315,8 +316,9 @@ func (m *Manager) GetStatus(ctx context.Context) (Status, error) {
 	}
 
 	status := Status{
-		Running:     info.State.Running,
-		ContainerID: info.ID[:12],
+		Running:       info.State.Running,
+		ContainerID:   info.ID[:12],
+		ContainerName: strings.TrimPrefix(info.Name, "/"),
 	}
 
 	smtpPort := nat.Port(fmt.Sprintf("%d/tcp", smtpInternalPort))
